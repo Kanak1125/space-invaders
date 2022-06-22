@@ -36,14 +36,16 @@ class Spaceship {
     }
 }
 const ship = new Spaceship();
+const LEFT_key = 37;
+const RIGHT_key = 39;
 const keys = {
-    a: {
+    LEFT: {
+        pressed: false      //property defined to stop the animation when the event is keyUP...
+    },
+    RIGHT: {
         pressed: false
     },
-    d: {
-        pressed: false
-    },
-    space: {
+    SPACE: {
         pressed: false
     }
 }
@@ -55,10 +57,10 @@ function animate_ship() {
     cxt.fillRect(0, 0, canvas.width, canvas.height);
     ship.update();
 
-    if(keys.d.pressed) {
+    if(keys.RIGHT.pressed && ship.position.x < canvas.width - ship.width) {
         ship.velocity.x = 5;
     }
-    else if(keys.a.pressed) {
+    else if(keys.LEFT.pressed && ship.position.x > 0) {
         ship.velocity.x = -5;
     }
     else {
@@ -68,27 +70,23 @@ function animate_ship() {
 animate_ship();
 
 document.addEventListener('keydown', key => {
-    switch (key) {
-        case 'd':
-            keys.d.pressed = true;
-            console.log('move right');
+    switch (key.keyCode) {
+        case RIGHT_key:
+            keys.RIGHT.pressed = true;
             break;
-        case 'a': 
-            keys.a.pressed = true;
-            console.log('move LEFT');
+        case LEFT_key: 
+            keys.LEFT.pressed = true;
             break;
     }
 })
 
 document.addEventListener('keyup', key => {
-    switch (key) {
-        case 'd':
-            keys.d.pressed = false;
-            console.log('move right');
+    switch (key.keyCode) {
+        case RIGHT_key:
+            keys.RIGHT.pressed = false;
             break;
-        case 'a': 
-            keys.a.pressed = false;
-            console.log('move LEFT');
+        case LEFT_key: 
+            keys.LEFT.pressed = false;
             break;
     }
 })
