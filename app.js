@@ -259,8 +259,3 @@ function createBullet() {
     }))
 console.log(bullet)
 }
-
-//function to remove the invader from the grid...
-function removeInvader() {
-    
-}
