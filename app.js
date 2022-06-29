@@ -136,12 +136,58 @@ class Grid {
     }
 }
 
+class Invader_bullet {
+    constructor({position, velocity}) { // passing in properties as an argument...
+        this.position = position;
+        this.velocity = velocity;
+        this.radius = 10;
+    }
+    draw() {
+        cxt.beginPath();
+        cxt.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+        cxt.fillStyle = '#204a87';
+        cxt.fill();
+        cxt.closePath();
+    }
+    update() {
+        this.draw();
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+    }
+}
+
+//particles for after death...
+class Particles {
+    constructor({position}) {
+        this.position = position;
+        this.velocity = {
+            x: Math.random() * 5 - 2.5,     //velocity between (-2.5) and 2.5
+            y: Math.random() * 5 - 2.5
+         }
+        this.radius = Math.random() * 4 + 1;
+    }
+    draw() {
+        cxt.beginPath();
+        cxt.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+        cxt.fillStyle = '#204a87';
+        cxt.fill();
+        cxt.closePath();
+    }
+    update() {
+        this.draw();
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+        if (this.radius > 0.2) this.radius -= 0.1;
+    }
+}
+
 const ship = new Spaceship();
 // const invader = new Invader();
 const grid = new Grid();
 grids.push(grid);
-console.log(grids)
 let bullet = []; //this... index (position)equal
+let invader_bullet = [];
+let particles_array = [];
 
 const LEFT_key = 37;
 const RIGHT_key = 39;
@@ -214,16 +260,43 @@ function animate_ship() {
                     shot.position.y + shot.radius >= invader.position.y &&
                     shot.position.x - shot.radius <= invader.position.x  &&
                     shot.position.x + shot.radius >= invader.position.x) {
+                        for(let p = 0; p < 10; p++) {
+                            particles_array.push(new Particles({position: 
+                                {x: invader.position.x + invader.height / 2,
+                                 y: invader.position.y + invader.height / 2
+                                }}))
+                        }
                         setTimeout(() => {      //to remove the invader and a bullet instantly...
                             grid.invaders.splice(i, 1)
                             bullet.splice(index, 1);
-                            grid.width = columns * 30;
+
+                            if(grid.invaders.length > 0) {
+                                const firstInvader = grid.invaders[0];
+                                const lastInvader = grid.invaders[grid.invaders.length - 1];
+
+                                grid.width = lastInvader.position.x - firstInvader.position.x + lastInvader.width;
+                                grid.position.x = firstInvader.position.x;
+                            }
                         }, 0)
                     }
            })
         })
     })
 
+    //update every bullets....
+    invader_bullet.forEach(bullet => {
+        bullet.update();
+    })
+
+    //update every particles....
+    particles_array.forEach((particle, index) => {
+        particle.update();
+        if(particle.radius < 0.3) particles_array.splice(index, 1);
+    })
+    
+    //remove the particles from an array if the radius of particle is less than 0.3...
+    
+    // console.log(grid.invaders)
     if(keys.RIGHT.pressed && ship.position.x < canvas.width - ship.width) {
         ship.velocity.x = 10;
         ship.rotation = 0.1;
@@ -241,6 +314,10 @@ console.log(frames)
 if(frames % random_Interval === 0) {
     grids.push(new Grid());
     console.log(grids)
+    invader_bullet.push(new Invader_bullet({
+        position: {x: 100, y: 100},
+        velocity: {x: 0, y: 5}
+    }))
 }
 }
 animate_ship();
