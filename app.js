@@ -4,6 +4,9 @@ const cxt = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+const getScore = document.getElementById('score');
+let score = 0;
+
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -14,6 +17,7 @@ const image = new Image();
 image.src = 'images/space_ship.png';
 const image_invader = new Image();
 image_invader.src = 'images/space_invader.png';
+//let gun_shot_audio = new Audio('audio/P226-9mm-Far-Single-Gunshot-E-www.fesliyanstudios.com.mp3')
 
 class Spaceship {
     constructor() {
@@ -365,6 +369,8 @@ function animate() {
                             })
 
                             if(invaderFound && bulletFound) {
+                                score ++;
+                                getScore.textContent = score;
                                 grid.invaders.splice(i, 1)
                                 bullet.splice(index, 1);
                             }
@@ -435,6 +441,8 @@ animate();
 
 //function to create a bullet...
 function createBullet() {
+    //gun_shot_audio.currentTime = 0;
+    //gun_shot_audio.play();
     bullet.push(new Bullet({
         position : {
             x: ship.position.x + ship.width / 2,
