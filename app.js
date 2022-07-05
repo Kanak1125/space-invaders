@@ -29,9 +29,11 @@ class Spaceship {
         this.width = 100
         this.height = 100
         this.rotation = 0
+        this.opacity = 1
     }
     draw() {
         cxt.save();  // takes the snapshot of the current canvas...
+        cxt.globalAlpha = this.opacity 
         cxt.translate(
             this.position.x + this.width / 2,
             this.position.y + this.height / 2);
@@ -71,6 +73,24 @@ class Bullet {
     }
 }
 
+class InvaderBullet {
+    constructor({position, velocity}) { // passing in properties as an argument...
+        this.position = position;
+        this.velocity = velocity;
+        this.width = 5;
+        this.height = 20;
+    }
+    draw() {
+        cxt.fillStyle = '#204a87';
+        cxt.fillRect(this.position.x, this.position.y, this.width, this.height);
+    }
+    update() {
+        this.draw();
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+    }
+}
+
 // const invader_velocity_X = Math.random() * 5 + 2;
 class Invader {
     constructor({position}) {
@@ -94,11 +114,22 @@ class Invader {
         this.position.x += velocity.x;
         this.position.y += velocity.y;
     }
+    shoot(invader_bullets) {
+        invader_bullets.push(new InvaderBullet({
+            position: {
+                x: this.position.x + this.width / 2,
+                y: this.position.y + this.height
+            },
+            velocity: {
+                x: 0,
+                y: 3
+            }
+        }));
+    }
 }
 
 let grids = [];
 
-console.log(grids)
 class Grid {
     constructor() {
         this.position = {
@@ -136,35 +167,12 @@ class Grid {
     }
 }
 
-class Invader_bullet {
-    constructor({position, velocity}) { // passing in properties as an argument...
-        this.position = position;
-        this.velocity = velocity;
-        this.radius = 10;
-    }
-    draw() {
-        cxt.beginPath();
-        cxt.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
-        cxt.fillStyle = '#204a87';
-        cxt.fill();
-        cxt.closePath();
-    }
-    update() {
-        this.draw();
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
-    }
-}
-
 //particles for after death...
 class Particles {
-    constructor({position}) {
+    constructor({position, velocity, radius}) {
         this.position = position;
-        this.velocity = {
-            x: Math.random() * 5 - 2.5,     //velocity between (-2.5) and 2.5
-            y: Math.random() * 5 - 2.5
-         }
-        this.radius = Math.random() * 4 + 1;
+        this.velocity = velocity
+        this.radius = radius
     }
     draw() {
         cxt.beginPath();
@@ -181,14 +189,53 @@ class Particles {
     }
 }
 
+let count_radius_growth = 0;
+//class to create background stars...
+class Star {
+    constructor() {
+        this.position = {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height
+        }
+        this.velocity = {
+            x: 0, 
+            y: -0.5
+        }
+        this.radius = Math.random() * 1.5 + 0.5;    //random radius between 0.5 and 2...
+        this.previous_star_size = this.radius;
+        this.opacity = Math.random() * 0.8 + 0.3;
+    }
+    draw() {
+        cxt.beginPath();
+        cxt.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+        cxt.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+        cxt.fill();
+        cxt.closePath();
+    }
+    update() {
+        this.draw();
+        this.radius += 0.01
+        count_radius_growth ++;
+        if(count_radius_growth > 10) {
+            this.radius = Math.random() * 1.5 + 0.5;
+        }
+        this.position.y -= this.velocity.y;
+    }
+}
+
 const ship = new Spaceship();
-// const invader = new Invader();
 const grid = new Grid();
 grids.push(grid);
 let bullet = []; //this... index (position)equal
-let invader_bullet = [];
 let particles_array = [];
+let invader_bullet = [];
 
+let stars = []
+for(let i = 0; i < 100; i++) {
+    stars.push(new Star())
+}
+
+let control = true;
 const LEFT_key = 37;
 const RIGHT_key = 39;
 // const UP_key = 38;
@@ -206,6 +253,7 @@ const keys = {
 }
 
 document.addEventListener('keydown', key => {
+    if(control == false) return;
     switch (key.keyCode) {
         case RIGHT_key:
             keys.RIGHT.pressed = true;
@@ -235,12 +283,35 @@ document.addEventListener('keyup', key => {
 // function to loop the space_ship on to the screen...
 const random_Interval = Math.floor((Math.random() * 500) + 500);
 let frames = 0;
-function animate_ship() {
-    requestAnimationFrame(animate_ship)
+
+function createParticles({object}) {
+    for(let p = 0; p < 10; p++) {
+        particles_array.push(new Particles(
+            {position:
+                {
+                x: object.position.x + object.height / 2,
+                y: object.position.y + object.height / 2
+                }
+            ,
+                velocity: 
+                {
+                    x: Math.random() * 5 - 2.5,     //velocity between (-2.5) and 2.5
+                    y: Math.random() * 5 - 2.5
+                }
+            ,
+            radius: Math.random() * 5 + 1    
+        }))
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate)
     cxt.fillStyle = 'black';
     cxt.fillRect(0, 0, canvas.width, canvas.height);
+   
     ship.update();
-
+    console.log(stars)
+    
     bullet.forEach((shot, index) => {
         shot.update();
         // if bullet hits the upper wall remove it from the 'bullet' array...
@@ -249,8 +320,29 @@ function animate_ship() {
         }
     })
 
+    stars.forEach(star => {
+        star.update();
+        if(star.position.y > canvas.height) {
+            star.position.y = 0;
+        }
+    })
+    
     grids.forEach(grid => {
         grid.update();
+
+        //spawning the bullets from invaders...
+        if(frames % 100 === 0 && grid.invaders.length > 0) {
+            grid.invaders[Math.floor(Math.random() * grid.invaders.length)].shoot(invader_bullet);
+            console.log(ship.position.y)
+            invader_bullet.forEach((bullet, index) => {
+                if(bullet.position.y >= canvas.height) {
+                    setTimeout(() => {
+                        invader_bullet.splice(bullet[index], 1);
+                    }, 0)
+                }
+            })
+        }
+
         grid.invaders.forEach((invader, i) => {
             invader.update({velocity: grid.velocity});
 
@@ -260,15 +352,22 @@ function animate_ship() {
                     shot.position.y + shot.radius >= invader.position.y &&
                     shot.position.x - shot.radius <= invader.position.x  &&
                     shot.position.x + shot.radius >= invader.position.x) {
-                        for(let p = 0; p < 10; p++) {
-                            particles_array.push(new Particles({position: 
-                                {x: invader.position.x + invader.height / 2,
-                                 y: invader.position.y + invader.height / 2
-                                }}))
-                        }
+                    createParticles({
+                        object: invader
+                    });
+
                         setTimeout(() => {      //to remove the invader and a bullet instantly...
-                            grid.invaders.splice(i, 1)
-                            bullet.splice(index, 1);
+                            const invaderFound = grid.invaders.find(invader2 => {   //find the closest element in array...
+                                return invader2 === invader
+                            })
+                            const bulletFound = bullet.find(bullet2 => {
+                                return bullet2 === shot
+                            })
+
+                            if(invaderFound && bulletFound) {
+                                grid.invaders.splice(i, 1)
+                                bullet.splice(index, 1);
+                            }
 
                             if(grid.invaders.length > 0) {
                                 const firstInvader = grid.invaders[0];
@@ -276,6 +375,7 @@ function animate_ship() {
 
                                 grid.width = lastInvader.position.x - firstInvader.position.x + lastInvader.width;
                                 grid.position.x = firstInvader.position.x;
+                                console.log(grid.invaders.length)
                             }
                         }, 0)
                     }
@@ -283,44 +383,55 @@ function animate_ship() {
         })
     })
 
-    //update every bullets....
-    invader_bullet.forEach(bullet => {
-        bullet.update();
-    })
-
     //update every particles....
     particles_array.forEach((particle, index) => {
         particle.update();
         if(particle.radius < 0.3) particles_array.splice(index, 1);
     })
+let explosion = [];
+    //update every invader_bullets...
+    invader_bullet.forEach((bullet, index) => {
+        bullet.update();
+        if(bullet.position.y + bullet.height >= ship.position.y &&
+           bullet.position.x - bullet.width >= ship.position.x &&
+           bullet.position.x <= ship.position.x + ship.width - 20 &&
+           bullet.position.y <= ship.position.y + ship.height &&
+           ship.opacity === 1) {
+            createParticles({
+                object: ship
+            });
+            invader_bullet.splice(index, 1)
+            ship.opacity = 0;
+            control = false;
+            console.log("u r doomed!")
+        }
+        console.log(explosion)
+        explosion.forEach(particle => {
+            particle.draw(cxt.fillStyle = 'red')
+            particle.update();
+        })
+    })
     
     //remove the particles from an array if the radius of particle is less than 0.3...
     
-    // console.log(grid.invaders)
     if(keys.RIGHT.pressed && ship.position.x < canvas.width - ship.width) {
         ship.velocity.x = 10;
-        ship.rotation = 0.1;
+        ship.rotation = 0.15;
     }
     else if(keys.LEFT.pressed && ship.position.x > 0) {
         ship.velocity.x = -10;
-        ship.rotation = -0.1;
+        ship.rotation = -0.15;
     }
     else {
         ship.velocity.x = 0;
         ship.rotation = 0;
 }
 frames ++;
-console.log(frames)
 if(frames % random_Interval === 0) {
     grids.push(new Grid());
-    console.log(grids)
-    invader_bullet.push(new Invader_bullet({
-        position: {x: 100, y: 100},
-        velocity: {x: 0, y: 5}
-    }))
 }
 }
-animate_ship();
+animate();
 
 //function to create a bullet...
 function createBullet() {
@@ -334,5 +445,4 @@ function createBullet() {
             y: -7
         }
     }))
-console.log(bullet)
 }
